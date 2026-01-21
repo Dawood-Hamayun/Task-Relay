@@ -2,6 +2,12 @@
 
 TaskRelay is a full-stack, real-time collaborative workspace for teams. It brings together tasks, subtasks, meetings, scheduling, commenting, tagging, and role-based permissions in a single environment. The project focuses on how modern SaaS collaboration tools work under the hood rather than just UI polish.
 
+<p align="center">
+  <img src="./assets/TaskRelay.gif" width="800">
+  <br/>
+  <em>Demo — Task Relay</em>
+</p>
+
 ---
 
 ## What Problem It Explores
