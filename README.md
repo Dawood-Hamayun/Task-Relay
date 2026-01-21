@@ -1,62 +1,60 @@
-# TaskRelay — Real-Time Project Workspace
+# TaskRelay — Real-Time Collaborative Workspace
 
-TaskRelay is a full-stack, real-time project workspace for teams. It combines tasks, subtasks, meetings, scheduling, commenting, tagging, and role-based permissions into a single collaborative environment. The project demonstrates how modern SaaS collaboration tools are architected end-to-end with real-time updates, structured domain models, and predictable permission rules.
-
-The focus of TaskRelay is not visual polish or marketing—it’s about how collaboration actually works at the technical and product level.
+TaskRelay is a full-stack, real-time collaborative workspace for teams. It brings together tasks, subtasks, meetings, scheduling, commenting, tagging, and role-based permissions in a single environment. The project focuses on how modern SaaS collaboration tools work under the hood rather than just UI polish.
 
 ---
 
-## Core Idea
+## What Problem It Explores
 
-Most task apps are designed for individuals. Team collaboration requires more than tasks:
+Most task apps are designed for individuals. Team collaboration has additional requirements:
 
-- permissions
-- invites
-- meetings
-- scheduling
-- comments
-- tagging
-- real-time sync
-- onboarding flows
+- shared workspaces
+- roles and permissions
+- invitations
+- meetings and scheduling
+- comments and discussion
+- tagging and filtering
+- real-time synchronization
+- onboarding and access control
 
-TaskRelay implements those pieces and shows how they interact in a cohesive system.
+TaskRelay implements these concerns and shows how they interact in practice.
 
 ---
 
-## User-Level Capabilities
+## Feature Overview (User-Level)
 
 Users can:
 
 - create projects
-- invite team members by email
+- invite collaborators by email
 - assign roles
 - create tasks and subtasks
 - attach files
-- comment and discuss
+- discuss via comments
 - apply tags
 - schedule meetings
 - RSVP to events
-- drag-and-drop tasks on a kanban board
-- view task and personal stats
+- drag tasks on a Kanban board
+- view personal and project statistics
 
-A typical workflow looks like:
+A typical workflow:
 
-1. Create a project
+1. Create a workspace
 2. Invite collaborators
-3. Assign roles
+3. Assign project roles
 4. Add tasks → comments → tags
 5. Schedule meetings
-6. Collaborate in real time
+6. Work together in real time
 
 ---
 
-## Data Model Overview
+## Data Model (High-Level)
 
-The platform uses a normalized relational model with the following core entities:
+The platform uses a normalized relational schema with these core entities:
 
 - User
 - Project
-- Member (join model + roles)
+- Member (join + role)
 - Task
 - Subtask
 - Comment
@@ -66,17 +64,17 @@ The platform uses a normalized relational model with the following core entities
 - Invite
 - Attachment
 
-High-level structure:
+Relationship sketch:
 
 ```
-User (many) ←→ (many) Project via Member
+User ←→ Project via Member
 Project → Tasks → Subtasks / Comments / Attachments
 Project → Meetings → Attendees
 Tasks ←→ Tags (many-to-many)
 Invites operate before signup (email first, user later)
 ```
 
-This mirrors real SaaS collaboration patterns without collapsing the data into blobs.
+This mirrors patterns seen in SaaS work tools like Linear, Asana, Notion, and ClickUp.
 
 ---
 
@@ -88,19 +86,19 @@ Backend stack:
 - PostgreSQL
 - Prisma ORM
 - Socket.io (WebSockets)
-- JWT auth
+- JWT authentication
 - Nodemailer (email invites)
 
-Server responsibilities:
+Backend responsibilities:
 
-- domain logic (projects, tasks, meetings, invites)
-- access control checks
+- domain logic (tasks, projects, meetings, invites)
+- access control
 - email onboarding
 - real-time broadcasting
-- state transitions
-- validation and error handling
+- input validation
+- error handling
 
-The backend acts as the source of truth. Clients optimistically update and reconcile.
+The server acts as the source of truth. Clients reconcile through optimistic updates and real-time events.
 
 ---
 
@@ -109,29 +107,27 @@ The backend acts as the source of truth. Clients optimistically update and recon
 Frontend stack:
 
 - React
-- Next.js App Router
+- Next.js (App Router)
 - TanStack Query (server state)
 - Socket.io client
-- shadcn/ui
-- DnD Kit (drag-and-drop)
+- shadcn/ui (component primitives)
+- DnD Kit (drag-and-drop interactions)
 
 Client responsibilities:
 
-- rendering workspace
-- caching + invalidations
-- optimistic UI
-- socket subscriptions
-- visual organization of tasks + meetings
-
-Server data is cached and merged with real-time events.
+- workspace rendering
+- caching and invalidation
+- optimistic updates
+- socket subscription
+- merging real-time updates into local state
 
 ---
 
-## Real-Time Collaboration Model
+## Real-Time Collaboration
 
-TaskRelay uses WebSockets to synchronize state across users:
+TaskRelay uses WebSockets to keep multiple clients in sync.
 
-Events:
+Events include:
 
 - `taskCreated`
 - `taskUpdated`
@@ -139,45 +135,38 @@ Events:
 
 Mechanics:
 
-- clients join project rooms
-- server emits to only those rooms
-- views update instantly
+- clients join project-specific rooms
+- backend emits only to those rooms
+- Kanban board updates instantly
 - no polling required
-
-Optimistic updates reduce drag latency on the Kanban board.
+- optimistic drag-and-drop reduces perceived latency
 
 ---
 
-## Roles & Permissions
+## Roles & Access Control
 
-The system implements RBAC with four roles:
+The system defines four project roles:
 
-- **Owner** — full control + transfer ownership
-- **Admin** — manage members/content
-- **Member** — standard collaborator
+- **Owner** — full control, can transfer ownership
+- **Admin** — manage members and content
+- **Member** — can collaborate on tasks and meetings
 - **Viewer** — read-only
 
-Permissions enforced on backend, not just hidden in UI. This ensures correctness in multi-user flows like:
-
-- deleting a project
-- updating roles
-- removing members
-- managing invites
-- mutation rights on tasks/meetings/comments
+Access rules are enforced on the backend, not just the UI. This prevents invalid mutations during collaborative workflows (e.g., removing a member, editing meetings, updating tasks).
 
 ---
 
-## Invitation & Onboarding Flow
+## Invitations & Onboarding
 
-Invitations are email-based and work prior to signup:
+Invitations are email-based and operate before signup:
 
-1. Invite is sent to email
+1. Owner/Admin sends invite to email
 2. Invite stored with token + expiry
-3. Email link allows accept/decline
+3. Recipient can accept/decline
 4. Non-users can sign up and auto-join
-5. On acceptance → `Member` record created
+5. Accepted invites create a `Member` record
 
-This matches how tools like Asana, Linear, and Notion onboard teams.
+This is the onboarding pattern used in production collaboration tools.
 
 ---
 
@@ -187,72 +176,64 @@ TaskRelay uses TanStack Query for server state:
 
 - cached per project
 - stale-while-revalidate
-- optimistic updates
-- refetch on focus
+- optimistic mutations
+- refetch on window focus
 - granular invalidation
 
-This reduces unnecessary fetches and keeps UI in sync with WebSockets.
+Real-time events merge into the local cache instead of force-refreshing entire views.
 
 ---
 
-## Meetings & Scheduling Domain
+## Meetings & Scheduling
 
-Projects support integrated scheduling including:
+Projects support integrated scheduling:
 
 - title
 - description
 - datetime
 - attendees
-- RSVP statuses (pending, accepted, declined)
-- time range queries (week, upcoming, user-level)
+- RSVP statuses
 
-This demonstrates that collaboration involves more than tasks—it involves time and coordination.
+Features include:
+
+- upcoming views
+- weekly and user-scoped queries
+- RSVP management
+- meeting metadata
+
+This models coordination beyond tasks.
 
 ---
 
-## Engineering Notes
+## What This Project Demonstrates
 
-TaskRelay demonstrates:
+TaskRelay highlights:
 
 - relational data modeling
-- real-time event systems
+- domain-driven collaboration features
 - access control and permissions
-- email-based onboarding
+- real-time event systems
+- email-based onboarding flows
 - optimistic UI patterns
-- normalized state management
+- workspace UX design
 - drag-and-drop interaction
 - server/client coordination
-- meeting + scheduling domain logic
 
 ---
 
-## What This Project Is (and Is Not)
+## Scope & Status
 
 TaskRelay is:
 
-- a functioning demonstration of collaborative SaaS architecture
-- real-time and multi-user
+- functional as a collaborative workspace demo
 - based on TypeScript end-to-end
-- designed with domain correctness in mind
+- real-time and multi-user aware
+- architected for correctness, not just aesthetics
 
-TaskRelay is not:
+It is not:
 
-- a design exercise
-- a clone for commercial use
-- optimized for scale or billing
-- open-source (code is not included here)
-
----
-
-## Status
-
-Feature-complete as a demonstration of:
-
-- real-time collaboration
-- normalized relational domains
-- role-based access control
-- email onboarding
-- workspace UX
-
-Source code not included in this repository.
+- a commercial product
+- a design showcase
+- optimized for billing, teams, or scale
+- open-source (source code not provided here)
 
